@@ -828,7 +828,8 @@ class DatabaseManager:
                         for sep in separators:
                             # Count consistent occurrences across lines
                             counts = [line.count(sep) for line in lines]
-                            if counts and all(c > 0 for c in counts):
+                            # Check if counts list is not empty and all values are > 0
+                            if len(counts) > 0 and all(c > 0 for c in counts):
                                 # Calculate consistency score: higher if all counts are the same
                                 consistency = 1.0 if all(c == counts[0] for c in counts) else 0.5
                                 # Score is average count * consistency

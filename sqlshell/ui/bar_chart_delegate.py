@@ -7,7 +7,7 @@ class BarChartDelegate(QStyledItemDelegate):
         super().__init__(parent)
         self.min_val = 0
         self.max_val = 1
-        self.bar_color = QColor("#3498DB")
+        self.bar_color = QColor("#4cd275")  # Wortell brand green
 
     def set_range(self, min_val, max_val):
         self.min_val = min_val

@@ -5,10 +5,10 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "sqlshell"
 version = "0.3.5"
-description = "A powerful SQL shell with GUI interface for data analysis"
+description = "R.A.L.P.H. – Read/Analyze/Load/Parse Hub - A powerful SQL shell with GUI interface for data analysis"
 readme = "README.md"
 authors = [
-    {name = "SQLShell Team"}
+    {name = "Wortell"}
 ]
 requires-python = ">=3.8"
 keywords = ["sql", "data analysis", "gui", "duckdb"]

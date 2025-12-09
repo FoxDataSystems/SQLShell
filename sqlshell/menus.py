@@ -53,6 +53,12 @@ def create_file_menu(main_window):
     
     file_menu.addSeparator()
     
+    # OneLake Mode action - prominent Microsoft Fabric integration
+    onelake_action = file_menu.addAction('☁️ OneLake Mode...')
+    onelake_action.setShortcut('Ctrl+Shift+O')
+    onelake_action.setToolTip('Open OneLake workspace to discover and load lakehouses (Microsoft Fabric)')
+    onelake_action.triggered.connect(main_window.load_onelake_tables)
+    
     # Load data action (databases, CSV, Excel, Parquet, etc.)
     load_data_action = file_menu.addAction('Load Data...')
     load_data_action.setShortcut('Ctrl+L')

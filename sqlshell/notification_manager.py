@@ -37,9 +37,10 @@ class NotificationWidget(QWidget):
         
     def init_ui(self):
         """Initialize the notification UI"""
-        self.setFixedHeight(80)
-        self.setMinimumWidth(350)
+        # Use size hints instead of fixed size to allow content-based sizing
+        self.setMinimumSize(350, 80)
         self.setMaximumWidth(500)
+        # Don't set fixed height - let it adjust to content
         
         # Make widget stay on top
         self.setWindowFlags(Qt.WindowType.FramelessWindowHint | 
@@ -204,12 +205,20 @@ class NotificationWidget(QWidget):
             
     def show_notification(self, position: QRect):
         """Show the notification with slide-in animation"""
+        # Ensure widget has proper size before positioning
+        # Force a layout update to get correct size
+        self.adjustSize()
+        
+        # Get actual size after layout
+        actual_width = max(self.minimumWidth(), min(self.sizeHint().width(), self.maximumWidth()))
+        actual_height = max(self.minimumHeight(), self.sizeHint().height())
+        
         # Position is already in global screen coordinates
         # Start position: slide in from the right (off screen)
         start_rect = QRect(position.x() + 400, position.y(), 
-                          self.width(), self.height())
+                          actual_width, actual_height)
         end_rect = QRect(position.x(), position.y(),
-                        self.width(), self.height())
+                        actual_width, actual_height)
         
         self.setGeometry(start_rect)
         self.show()
@@ -299,13 +308,21 @@ class NotificationManager:
         
     def _calculate_position(self, notification: NotificationWidget) -> QRect:
         """Calculate the position for a new notification (in global screen coordinates)"""
+        # Ensure notification has proper size before calculating position
+        notification.adjustSize()
+        
         # Get the parent widget's global position on screen
         parent_global_pos = self.parent_widget.mapToGlobal(QPoint(0, 0))
         parent_width = self.parent_widget.width()
         
+        # Get actual notification size
+        notification_width = max(notification.minimumWidth(), 
+                                min(notification.sizeHint().width(), notification.maximumWidth()))
+        notification_height = max(notification.minimumHeight(), notification.sizeHint().height())
+        
         # Calculate position relative to parent's right edge (in screen coordinates)
         # Position notification inside the parent window's right side
-        x = parent_global_pos.x() + parent_width - notification.width() - 20
+        x = parent_global_pos.x() + parent_width - notification_width - 20
         y = parent_global_pos.y() + 80  # Start below any toolbar/menubar
         
         # Stack notifications vertically
@@ -313,7 +330,7 @@ class NotificationManager:
             if existing.isVisible():
                 y += existing.height() + self.notification_spacing
                 
-        return QRect(x, y, notification.width(), notification.height())
+        return QRect(x, y, notification_width, notification_height)
         
     def _remove_notification(self, notification: NotificationWidget):
         """Remove a notification from the list"""

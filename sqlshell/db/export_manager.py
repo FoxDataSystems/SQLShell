@@ -102,6 +102,59 @@ class ExportManager:
         except Exception as e:
             raise Exception(f"Failed to export to Parquet: {str(e)}")
     
+    def export_to_delta(self, df: pd.DataFrame, directory_path: str) -> Tuple[str, Dict[str, Any]]:
+        """Export data to Delta Lake format.
+        
+        Args:
+            df: The DataFrame to export
+            directory_path: The target directory path (Delta tables are directories, not files)
+            
+        Returns:
+            Tuple containing:
+            - The generated table name
+            - Dictionary with export metadata
+        """
+        try:
+            # Import deltalake
+            try:
+                from deltalake import write_deltalake
+            except ImportError:
+                raise Exception("deltalake library is not installed. Please install it with: pip install deltalake")
+            
+            # Ensure the directory exists
+            os.makedirs(directory_path, exist_ok=True)
+            
+            # Write the Delta table
+            # Delta tables store data in Parquet format with a _delta_log folder
+            write_deltalake(directory_path, df, mode='overwrite')
+            
+            # Generate table name from directory name
+            base_name = os.path.basename(directory_path.rstrip(os.sep))
+            table_name = self.db_manager.sanitize_table_name(base_name)
+            
+            # Ensure unique table name
+            original_name = table_name
+            counter = 1
+            while table_name in self.db_manager.loaded_tables:
+                table_name = f"{original_name}_{counter}"
+                counter += 1
+            
+            # Register the table in the database manager
+            self.db_manager.register_dataframe(df, table_name, directory_path)
+            
+            # Update tracking
+            self.db_manager.loaded_tables[table_name] = directory_path
+            self.db_manager.table_columns[table_name] = [str(col) for col in df.columns.tolist()]
+            
+            return table_name, {
+                'file_path': directory_path,
+                'columns': df.columns.tolist(),
+                'row_count': len(df)
+            }
+            
+        except Exception as e:
+            raise Exception(f"Failed to export to Delta: {str(e)}")
+    
     def convert_table_to_dataframe(self, table_widget) -> Optional[pd.DataFrame]:
         """Convert a QTableWidget to a pandas DataFrame with proper data types.
         
@@ -180,7 +233,9 @@ class ExportManager:
                         df_raw[col] = pd.to_datetime(df_raw[col])
                     except:
                         try:
-                            if df_raw[col].dropna().isin(['True', 'False']).all():
+                            dropped = df_raw[col].dropna()
+                            # Check if Series is not empty and all values are in ['True', 'False']
+                            if len(dropped) > 0 and dropped.isin(['True', 'False']).all():
                                 df_raw[col] = df_raw[col].map({'True': True, 'False': False})
                         except:
                             pass

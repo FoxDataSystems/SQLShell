@@ -128,8 +128,15 @@ class QueryTab(QWidget):
         self.export_parquet_btn.setFixedHeight(btn_height)
         self.export_parquet_btn.setStyleSheet(btn_style)
         
+        self.export_delta_btn = QPushButton('Delta')
+        self.export_delta_btn.setToolTip('Export results to Delta Lake format')
+        self.export_delta_btn.clicked.connect(self.export_to_delta)
+        self.export_delta_btn.setFixedHeight(btn_height)
+        self.export_delta_btn.setStyleSheet(btn_style)
+        
         self.button_layout.addWidget(self.export_excel_btn)
         self.button_layout.addWidget(self.export_parquet_btn)
+        self.button_layout.addWidget(self.export_delta_btn)
         
         self.query_layout.addLayout(self.button_layout)
         
@@ -257,6 +264,7 @@ class QueryTab(QWidget):
             self.clear_btn.setFixedWidth(28)
             self.export_excel_btn.setVisible(False)
             self.export_parquet_btn.setVisible(False)
+            self.export_delta_btn.setVisible(False)
         else:
             # Normal mode
             self.query_layout.setContentsMargins(8, 6, 8, 6)
@@ -275,6 +283,7 @@ class QueryTab(QWidget):
             self.clear_btn.setMaximumWidth(16777215)
             self.export_excel_btn.setVisible(True)
             self.export_parquet_btn.setVisible(True)
+            self.export_delta_btn.setVisible(True)
         
     def get_query_text(self):
         """Get the current query text"""
@@ -303,6 +312,11 @@ class QueryTab(QWidget):
         """Export results to Parquet"""
         if hasattr(self.parent, 'export_to_parquet'):
             self.parent.export_to_parquet()
+    
+    def export_to_delta(self):
+        """Export results to Delta Lake format"""
+        if hasattr(self.parent, 'export_to_delta'):
+            self.parent.export_to_delta()
             
     def eventFilter(self, obj, event):
         """Event filter to intercept Ctrl+Enter and send it to the main window"""

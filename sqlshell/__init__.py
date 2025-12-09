@@ -1,5 +1,5 @@
 """
-SQLShell - A powerful SQL shell with GUI interface for data analysis
+R.A.L.P.H. – Read/Analyze/Load/Parse Hub - A powerful SQL shell with GUI interface for data analysis
 """
 
 import sys
@@ -44,7 +44,7 @@ def _get_version() -> str:
     return "0.0.0"  # Last resort fallback
 
 __version__ = _get_version()
-__author__ = "SQLShell Team"
+__author__ = "Wortell"
 
 from sqlshell.__main__ import main, SQLShell
 from PyQt6.QtWidgets import QApplication

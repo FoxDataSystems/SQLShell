@@ -48,6 +48,7 @@ class DraggableTablesList(QTreeWidget):
         
         # Connect signals
         self.itemDoubleClicked.connect(self.handle_item_double_click)
+        self.itemExpanded.connect(self.handle_item_expanded)
         self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.customContextMenuRequested.connect(self.show_context_menu)
         
@@ -106,6 +107,32 @@ class DraggableTablesList(QTreeWidget):
         # For non-folder items, handle showing the table preview
         if self.parent and hasattr(self.parent, 'show_table_preview'):
             self.parent.show_table_preview(item)
+    
+    def handle_item_expanded(self, item):
+        """Handle when a folder item is expanded"""
+        if not item or not self.is_folder_item(item):
+            return
+        
+        # Check if this is a OneLake folder that needs lazy loading
+        if self.parent and hasattr(self.parent, 'load_onelake_folder_tables'):
+            # Check if folder has OneLake metadata (stored in UserRole+1)
+            try:
+                lakehouse_path = item.data(0, Qt.ItemDataRole.UserRole + 1)
+                if lakehouse_path and isinstance(lakehouse_path, str):
+                    # Check if already loaded (has children that are tables, not placeholders)
+                    if item.childCount() == 0:
+                        # Load tables for this lakehouse
+                        self.parent.load_onelake_folder_tables(item, lakehouse_path)
+                    else:
+                        # Check if only placeholder exists
+                        first_child = item.child(0)
+                        if first_child and first_child.data(0, Qt.ItemDataRole.UserRole) == "placeholder":
+                            # Remove placeholder and load tables
+                            item.removeChild(first_child)
+                            self.parent.load_onelake_folder_tables(item, lakehouse_path)
+            except (TypeError, AttributeError):
+                # Not a OneLake folder or no path stored
+                pass
     
     def is_folder_item(self, item):
         """Check if an item is a folder"""
@@ -504,21 +531,32 @@ class DraggableTablesList(QTreeWidget):
         # Create new folder if not found
         return self.create_folder(folder_name)
     
-    def create_folder(self, folder_name):
-        """Create a new folder in the tree"""
+    def create_folder(self, folder_name, lakehouse_path=None):
+        """Create a new folder in the tree
+        
+        Args:
+            folder_name: Name of the folder
+            lakehouse_path: Optional path to lakehouse Tables folder for OneLake lazy loading
+        """
         folder = QTreeWidgetItem(self)
         folder.setText(0, folder_name)
         folder.setIcon(0, QIcon.fromTheme("folder"))
         # Store item type as folder
         folder.setData(0, Qt.ItemDataRole.UserRole, "folder")
+        # Store lakehouse path if provided (for OneLake lazy loading)
+        if lakehouse_path:
+            folder.setData(0, Qt.ItemDataRole.UserRole + 1, lakehouse_path)
         # Make folder text bold
         font = folder.font(0)
         font.setBold(True)
         folder.setFont(0, font)
         # Set folder flags (can drop onto)
         folder.setFlags(folder.flags() | Qt.ItemFlag.ItemIsDropEnabled)
-        # Start expanded
-        folder.setExpanded(True)
+        # Start collapsed for OneLake folders (so they load on expand)
+        if lakehouse_path:
+            folder.setExpanded(False)
+        else:
+            folder.setExpanded(True)
         return folder
     
     def add_table_item(self, table_name, source, needs_reload=False, folder_name=None):

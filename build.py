@@ -20,9 +20,9 @@ import sys
 from pathlib import Path
 
 # Configuration
-APP_NAME = "SQLShell"
-APP_AUTHOR = "SQLShell Team"
-APP_DESCRIPTION = "A powerful SQL shell with GUI interface for data analysis"
+APP_NAME = "R.A.L.P.H. – Read/Analyze/Load/Parse Hub"
+APP_AUTHOR = "Wortell"
+APP_DESCRIPTION = "R.A.L.P.H. – Read/Analyze/Load/Parse Hub - A powerful SQL shell with GUI interface for data analysis"
 
 def get_version_from_pyproject() -> str:
     """Read version from pyproject.toml (single source of truth)."""

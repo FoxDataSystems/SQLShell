@@ -1,4 +1,4 @@
-; SQLShell Inno Setup Script
+; R.A.L.P.H. Inno Setup Script
 ; Creates a professional Windows installer
 ;
 ; Requirements:
@@ -8,12 +8,12 @@
 ; Build command:
 ;   iscc sqlshell_inno.iss
 
-#define MyAppName "SQLShell"
-#define MyAppVersion "0.3.5"
-#define MyAppPublisher "SQLShell Team"
-#define MyAppURL "https://github.com/oyvinrog/SQLShell"
-#define MyAppExeName "SQLShell.exe"
-#define MyAppAssocName "SQLShell Project"
+#define MyAppName "R.A.L.P.H. – Read/Analyze/Load/Parse Hub"
+#define MyAppVersion "0.0.1"
+#define MyAppPublisher "Wortell"
+#define MyAppURL "https://github.com/FoxDataSystems/SQLShell"
+#define MyAppExeName "ralph.exe"
+#define MyAppAssocName "R.A.L.P.H. Project"
 #define MyAppAssocExt ".sqlproj"
 #define MyAppAssocKey StringChange(MyAppAssocName, " ", "") + MyAppAssocExt
 
@@ -62,7 +62,7 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
 Name: "quicklaunchicon"; Description: "{cm:CreateQuickLaunchIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked; OnlyBelowVersion: 6.1; Check: not IsAdminInstallMode
-Name: "associatefiles"; Description: "Associate .sqlproj files with SQLShell"; GroupDescription: "File associations:"; Flags: unchecked
+Name: "associatefiles"; Description: "Associate .sqlproj files with R.A.L.P.H."; GroupDescription: "File associations:"; Flags: unchecked
 
 [Files]
 ; Main application files

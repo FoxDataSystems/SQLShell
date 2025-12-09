@@ -18,9 +18,9 @@ from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
                            QCompleter, QFrame, QToolButton, QSizePolicy, QTabWidget,
                            QStyleFactory, QToolBar, QStatusBar, QLineEdit, QMenu,
                            QCheckBox, QWidgetAction, QMenuBar, QInputDialog, QProgressDialog,
-                           QListWidgetItem, QDialog, QGraphicsDropShadowEffect, QTreeWidgetItem)
+                           QListWidgetItem, QDialog, QGraphicsDropShadowEffect, QTreeWidgetItem, QTabBar)
 from PyQt6.QtCore import Qt, QAbstractTableModel, QRegularExpression, QRect, QSize, QStringListModel, QPropertyAnimation, QEasingCurve, QTimer, QPoint, QMimeData
-from PyQt6.QtGui import QFont, QColor, QSyntaxHighlighter, QTextCharFormat, QPainter, QTextFormat, QTextCursor, QIcon, QPalette, QLinearGradient, QBrush, QPixmap, QPolygon, QPainterPath, QDrag
+from PyQt6.QtGui import QFont, QColor, QSyntaxHighlighter, QTextCharFormat, QPainter, QTextFormat, QTextCursor, QIcon, QPalette, QLinearGradient, QBrush, QPixmap, QPolygon, QPainterPath, QDrag, QPen
 import numpy as np
 from datetime import datetime
 
@@ -38,6 +38,87 @@ from sqlshell.styles import (get_application_stylesheet, get_tab_corner_styleshe
 from sqlshell.menus import setup_menubar
 from sqlshell.table_list import DraggableTablesList
 from sqlshell.notification_manager import init_notification_manager, show_error_notification, show_warning_notification, show_info_notification, show_success_notification
+
+
+class CustomTabBar(QTabBar):
+    """Custom tab bar that draws a visible × on the close button"""
+    
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setTabsClosable(True)
+        self._hovered_tab_index = -1
+    
+    def mouseMoveEvent(self, event):
+        """Track which tab's close button is being hovered"""
+        super().mouseMoveEvent(event)
+        self._update_hovered_tab(event.pos())
+        self.update()
+    
+    def leaveEvent(self, event):
+        """Clear hover state when mouse leaves"""
+        super().leaveEvent(event)
+        self._hovered_tab_index = -1
+        self.update()
+    
+    def _update_hovered_tab(self, pos):
+        """Update which tab's close button is being hovered"""
+        self._hovered_tab_index = -1
+        for i in range(self.count()):
+            tab_rect = self.tabRect(i)
+            close_button_size = 18
+            close_button_x = tab_rect.right() - close_button_size - 4
+            close_button_y = tab_rect.top() + (tab_rect.height() - close_button_size) // 2
+            close_rect = QRect(close_button_x, close_button_y, close_button_size, close_button_size)
+            
+            if close_rect.contains(pos):
+                self._hovered_tab_index = i
+                break
+    
+    def paintEvent(self, event):
+        """Override paint event to draw × on close buttons"""
+        super().paintEvent(event)
+        
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        
+        # Draw × on each close button
+        for i in range(self.count()):
+            tab_rect = self.tabRect(i)
+            close_button_size = 18
+            close_button_x = tab_rect.right() - close_button_size - 4
+            close_button_y = tab_rect.top() + (tab_rect.height() - close_button_size) // 2
+            
+            close_rect = QRect(close_button_x, close_button_y, close_button_size, close_button_size)
+            
+            # Check if this close button is being hovered
+            is_hover = (self._hovered_tab_index == i)
+            
+            # Draw background
+            if is_hover:
+                painter.setBrush(QBrush(QColor(231, 76, 60, 220)))
+                painter.setPen(QPen(QColor(200, 50, 40, 255), 1))
+            else:
+                painter.setBrush(QBrush(QColor(100, 100, 100, 220)))
+                painter.setPen(QPen(QColor(60, 60, 60, 255), 1))
+            
+            painter.drawRoundedRect(close_rect, 3, 3)
+            
+            # Draw × character
+            painter.setPen(QPen(QColor(255, 255, 255), 2.5))
+            center_x = close_rect.center().x()
+            center_y = close_rect.center().y()
+            offset = 5
+            
+            # Draw two lines forming ×
+            painter.drawLine(
+                int(center_x - offset), int(center_y - offset),
+                int(center_x + offset), int(center_y + offset)
+            )
+            painter.drawLine(
+                int(center_x - offset), int(center_y + offset),
+                int(center_x + offset), int(center_y - offset)
+            )
+
 
 class SQLShell(QMainWindow):
     def __init__(self):
@@ -64,20 +145,24 @@ class SQLShell(QMainWindow):
         # Load recent and frequent files from settings
         self.load_recent_files()
         
-        # Define color scheme
+        # Define color scheme - Wortell brand colors
         self.colors = {
-            'primary': "#2C3E50",       # Dark blue-gray
-            'secondary': "#3498DB",     # Bright blue
-            'accent': "#1ABC9C",        # Teal
-            'background': "#ECF0F1",    # Light gray
-            'text': "#2C3E50",          # Dark blue-gray
-            'text_light': "#7F8C8D",    # Medium gray
-            'success': "#2ECC71",       # Green
-            'warning': "#F39C12",       # Orange
-            'error': "#E74C3C",         # Red
-            'dark_bg': "#34495E",       # Darker blue-gray
-            'light_bg': "#F5F5F5",      # Very light gray
-            'border': "#BDC3C7"         # Light gray border
+            'primary': "#8301ff",       # Headers - Purple
+            'secondary': "#4cd275",      # Subtitles - Green
+            'accent': "#4cd275",         # Accent - Green
+            'background': "#06021b",      # Dark gradient start
+            'background_end': "#2f0b64", # Dark gradient end
+            'text': "#f0f0f0",           # Main text - Whiteish
+            'text_light': "#d0d0d0",      # Light text - Lighter whiteish
+            'text_muted': "#b0b0b0",      # Muted text
+            'success': "#4cd275",         # Success - Green
+            'warning': "#F39C12",         # Orange
+            'error': "#E74C3C",           # Red
+            'dark_bg': "#1a0528",         # Darker background variant
+            'light_bg': "#2f0b64",        # Lighter dark background
+            'border': "#4cd275",          # Border - Green accent
+            'header': "#8301ff",          # Headers - Purple
+            'subtitle': "#4cd275"         # Subtitles - Green
         }
         
         self.init_ui()
@@ -102,7 +187,7 @@ class SQLShell(QMainWindow):
         self.setStyleSheet(get_application_stylesheet(self.colors))
 
     def init_ui(self):
-        self.setWindowTitle('SQL Shell')
+        self.setWindowTitle('R.A.L.P.H. – Read/Analyze/Load/Parse Hub')
         
         # Get screen geometry for smart sizing
         screen = QApplication.primaryScreen()
@@ -180,7 +265,7 @@ class SQLShell(QMainWindow):
         # Drag and drop info label
         drag_drop_info = QLabel("💡 Drag and drop files here to load them instantly!\nSupported: Excel, CSV, Parquet, SQLite, and more")
         drag_drop_info.setWordWrap(True)
-        drag_drop_info.setStyleSheet("color: #52C41A; font-size: 11px; margin-top: 8px; margin-bottom: 8px; background-color: rgba(82, 196, 26, 0.1); padding: 8px; border-radius: 4px; border-left: 3px solid #52C41A;")
+        drag_drop_info.setStyleSheet("color: #4cd275; font-size: 11px; margin-top: 8px; margin-bottom: 8px; background-color: rgba(76, 210, 117, 0.1); padding: 8px; border-radius: 4px; border-left: 3px solid #4cd275;")
         left_layout.addWidget(drag_drop_info)
         
         # Tables section
@@ -192,7 +277,7 @@ class SQLShell(QMainWindow):
         # Tables info label
         tables_info = QLabel("Right-click on tables to profile columns, analyze structure, and discover distributions. Select multiple tables to analyze foreign key relationships.")
         tables_info.setWordWrap(True)
-        tables_info.setStyleSheet("color: #7FB3D5; font-size: 11px; margin-top: 2px; margin-bottom: 5px;")
+        tables_info.setStyleSheet("color: #b0b0b0; font-size: 11px; margin-top: 2px; margin-bottom: 5px;")
         left_layout.addWidget(tables_info)
         
         # Tables list with custom styling
@@ -202,6 +287,39 @@ class SQLShell(QMainWindow):
         self.tables_list.customContextMenuRequested.connect(self.show_tables_context_menu)
         left_layout.addWidget(self.tables_list)
         
+        # OneLake Mode button - prominent button for Microsoft Fabric OneLake
+        self.onelake_button = QPushButton("☁️ OneLake Mode")
+        self.onelake_button.setToolTip("Open OneLake workspace to discover and load lakehouses (Microsoft Fabric)")
+        self.onelake_button.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.onelake_button.clicked.connect(self.load_onelake_tables)
+        self.onelake_button.setStyleSheet("""
+            QPushButton {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1, 
+                    stop:0 rgba(0, 120, 212, 0.3), 
+                    stop:1 rgba(0, 120, 212, 0.2));
+                color: #0078D4;
+                border: 2px solid rgba(0, 120, 212, 0.6);
+                border-radius: 6px;
+                padding: 10px 14px;
+                font-size: 13px;
+                font-weight: bold;
+                text-align: center;
+            }
+            QPushButton:hover {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1, 
+                    stop:0 rgba(0, 120, 212, 0.4), 
+                    stop:1 rgba(0, 120, 212, 0.3));
+                border: 2px solid rgba(0, 120, 212, 0.8);
+                color: #005A9E;
+            }
+            QPushButton:pressed {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1, 
+                    stop:0 rgba(0, 120, 212, 0.25), 
+                    stop:1 rgba(0, 120, 212, 0.15));
+            }
+        """)
+        left_layout.addWidget(self.onelake_button)
+        
         # Browse button for quick file selection
         self.browse_button = QPushButton("📂 Browse...")
         self.browse_button.setToolTip("Open data files (Excel, CSV, Parquet) or databases (SQLite, DuckDB)")
@@ -209,9 +327,9 @@ class SQLShell(QMainWindow):
         self.browse_button.clicked.connect(self.browse_files)
         self.browse_button.setStyleSheet("""
             QPushButton {
-                background-color: rgba(255, 255, 255, 0.15);
-                color: white;
-                border: 1px solid rgba(255, 255, 255, 0.2);
+                background-color: rgba(76, 210, 117, 0.2);
+                color: #4cd275;
+                border: 1px solid rgba(76, 210, 117, 0.4);
                 border-radius: 4px;
                 padding: 8px 12px;
                 font-size: 12px;
@@ -219,11 +337,11 @@ class SQLShell(QMainWindow):
                 text-align: left;
             }
             QPushButton:hover {
-                background-color: rgba(255, 255, 255, 0.25);
-                border: 1px solid rgba(255, 255, 255, 0.3);
+                background-color: rgba(76, 210, 117, 0.3);
+                border: 1px solid rgba(76, 210, 117, 0.6);
             }
             QPushButton:pressed {
-                background-color: rgba(255, 255, 255, 0.1);
+                background-color: rgba(76, 210, 117, 0.15);
             }
         """)
         left_layout.addWidget(self.browse_button)
@@ -276,8 +394,10 @@ class SQLShell(QMainWindow):
         self.tab_drop_area.dropEvent = self.tab_area_drop
         right_layout.addWidget(self.tab_drop_area)
         
-        # Create tab widget for multiple queries
+        # Create tab widget for multiple queries with custom tab bar
         self.tab_widget = QTabWidget()
+        custom_tab_bar = CustomTabBar()
+        self.tab_widget.setTabBar(custom_tab_bar)
         self.tab_widget.setTabsClosable(True)
         self.tab_widget.setMovable(True)
         self.tab_widget.tabCloseRequested.connect(self.close_tab)
@@ -1276,6 +1396,106 @@ LIMIT 10
             show_error_notification(f"Failed to export data: {str(e)}")
             self.statusBar().showMessage('Error exporting data')
 
+    def export_to_delta(self):
+        """Export query results to Delta Lake format"""
+        # Get the current tab
+        current_tab = self.get_current_tab()
+        if not current_tab:
+            return
+            
+        if current_tab.results_table.rowCount() == 0:
+            QMessageBox.warning(self, "No Data", "There is no data to export.")
+            return
+        
+        # Use file dialog to get the table name, then create a folder with that name
+        # Remove .delta extension if user adds it, we'll create a folder instead
+        file_name, _ = QFileDialog.getSaveFileName(
+            self, 
+            "Save as Delta Table", 
+            "", 
+            "Delta Table (*.delta);;All Files (*)"
+        )
+        
+        if not file_name:
+            return
+        
+        # Remove .delta extension if present, and get the base name for the folder
+        if file_name.endswith('.delta'):
+            folder_name = file_name[:-6]  # Remove .delta extension
+        else:
+            folder_name = file_name
+        
+        # Get the directory where the folder should be created
+        parent_dir = os.path.dirname(folder_name) if os.path.dirname(folder_name) else os.getcwd()
+        table_folder_name = os.path.basename(folder_name)
+        
+        # Create the full path for the Delta table folder
+        directory_path = os.path.join(parent_dir, table_folder_name)
+        
+        try:
+            # Show loading indicator
+            self.statusBar().showMessage('Exporting data to Delta Lake format...')
+            
+            # Convert table data to DataFrame
+            df = self.get_table_data_as_dataframe()
+            
+            # Import deltalake
+            try:
+                from deltalake import write_deltalake
+            except ImportError:
+                QMessageBox.critical(
+                    self,
+                    "Missing Dependency",
+                    "deltalake library is not installed.\n\n"
+                    "Please install it with:\npip install deltalake"
+                )
+                return
+            
+            # Create the directory if it doesn't exist
+            os.makedirs(directory_path, exist_ok=True)
+            
+            # Write the Delta table (this creates Parquet files and _delta_log folder inside)
+            write_deltalake(directory_path, df, mode='overwrite')
+            
+            # Generate table name from folder name
+            table_name = self.db_manager.sanitize_table_name(table_folder_name)
+            
+            # Ensure unique table name
+            original_name = table_name
+            counter = 1
+            while table_name in self.db_manager.loaded_tables:
+                table_name = f"{original_name}_{counter}"
+                counter += 1
+            
+            # Register the table in the database manager
+            self.db_manager.register_dataframe(df, table_name, directory_path)
+            
+            # Update tracking
+            self.db_manager.loaded_tables[table_name] = directory_path
+            self.db_manager.table_columns[table_name] = [str(col) for col in df.columns.tolist()]
+            
+            # Update UI
+            self.tables_list.add_table_item(table_name, table_folder_name)
+            self.statusBar().showMessage(f'Data exported to Delta table at {directory_path} and loaded as table "{table_name}"')
+            
+            # Update completer with new table and column names
+            self.update_completer()
+            
+            # Show success message
+            QMessageBox.information(
+                self, 
+                "Export Successful", 
+                f"Data has been exported to Delta table:\n{directory_path}\n\n"
+                f"Created folder '{table_folder_name}' containing:\n"
+                f"- Parquet data files\n"
+                f"- _delta_log folder with transaction logs\n\n"
+                f"Loaded as table: {table_name}",
+                QMessageBox.StandardButton.Ok
+            )
+        except Exception as e:
+            show_error_notification(f"Failed to export data to Delta: {str(e)}")
+            self.statusBar().showMessage('Error exporting data to Delta')
+
     def get_table_data_as_dataframe(self):
         """Helper function to convert table widget data to a DataFrame with proper data types"""
         # Get the current tab
@@ -1359,9 +1579,14 @@ LIMIT 10
                         # If both numeric and datetime conversions fail,
                         # try boolean conversion for True/False strings
                         try:
-                            if df_raw[col].dropna().isin(['True', 'False']).all():
+                            dropped = df_raw[col].dropna()
+                            # Check if Series is not empty and all values are in ['True', 'False']
+                            if len(dropped) > 0 and dropped.isin(['True', 'False']).all():
                                 df_raw[col] = df_raw[col].map({'True': True, 'False': False})
-                        except:
+                        except (ValueError, TypeError) as e:
+                            # Handle ambiguous truth value errors or other type errors
+                            pass
+                        except Exception:
                             # Otherwise, keep as is
                             pass
             
@@ -1984,7 +2209,7 @@ LIMIT 10
                     first_tab.results_title.setText("RESULTS")
                 
                 self.current_project_file = None
-                self.setWindowTitle('SQL Shell')
+                self.setWindowTitle('R.A.L.P.H. – Read/Analyze/Load/Parse Hub')
                 self.db_info_label.setText("No database connected")
                 self.statusBar().showMessage('New project created')
         elif skip_confirmation:
@@ -2013,7 +2238,7 @@ LIMIT 10
                 first_tab.results_title.setText("RESULTS")
             
             self.current_project_file = None
-            self.setWindowTitle('SQL Shell')
+            self.setWindowTitle('R.A.L.P.H. – Read/Analyze/Load/Parse Hub')
             self.db_info_label.setText("No database connected")
 
     def save_project(self):
@@ -2030,7 +2255,7 @@ LIMIT 10
             self,
             "Save Project",
             "",
-            "SQL Shell Project (*.sqls);;All Files (*)"
+            "R.A.L.P.H. Project (*.sqls);;All Files (*)"
         )
         
         if file_name:
@@ -2038,7 +2263,7 @@ LIMIT 10
                 file_name += '.sqls'
             self.save_project_to_file(file_name)
             self.current_project_file = file_name
-            self.setWindowTitle(f'SQL Shell - {os.path.basename(file_name)}')
+            self.setWindowTitle(f'R.A.L.P.H. – Read/Analyze/Load/Parse Hub - {os.path.basename(file_name)}')
 
     def save_project_to_file(self, file_name):
         """Save project data to a file"""
@@ -2160,7 +2385,7 @@ LIMIT 10
                 self,
                 "Open Project",
                 "",
-                "SQL Shell Project (*.sqls);;All Files (*)"
+                "R.A.L.P.H. Project (*.sqls);;All Files (*)"
             )
         
         if file_name:
@@ -2484,7 +2709,7 @@ LIMIT 10
                 
                 # Update UI
                 self.current_project_file = file_name
-                self.setWindowTitle(f'SQL Shell - {os.path.basename(file_name)}')
+                self.setWindowTitle(f'R.A.L.P.H. – Read/Analyze/Load/Parse Hub - {os.path.basename(file_name)}')
                 
                 # Add to recent projects
                 self.add_recent_project(os.path.abspath(file_name))
@@ -3487,6 +3712,183 @@ LIMIT 10
                 current_tab.results_table.setColumnCount(0)
                 current_tab.row_count_label.setText("")
 
+    def load_onelake_tables(self):
+        """Discover OneLake lakehouses from workspace folder (lazy loading)"""
+        if not self.db_manager.is_connected():
+            # Create a default in-memory DuckDB connection if none exists
+            connection_info = self.db_manager.create_memory_connection()
+            self.db_info_label.setText(connection_info)
+        
+        # Get the workspace folder (e.g., "C:\Users\...\OneLake - Microsoft\DEV_Ralph")
+        workspace_folder = QFileDialog.getExistingDirectory(
+            self,
+            "Select OneLake Workspace Folder",
+            "",
+            QFileDialog.Option.ShowDirsOnly | QFileDialog.Option.DontResolveSymlinks
+        )
+        
+        if not workspace_folder:
+            return
+        
+        workspace_path = Path(workspace_folder)
+        
+        # Scan for folders starting with "lh_"
+        lakehouses = []
+        try:
+            for item in workspace_path.iterdir():
+                if item.is_dir() and item.name.startswith('lh_'):
+                    # Check if it has a Tables folder
+                    tables_folder = item / 'Tables'
+                    if tables_folder.exists() and tables_folder.is_dir():
+                        lakehouses.append({
+                            'name': item.name,
+                            'path': str(item),
+                            'tables_path': str(tables_folder)
+                        })
+        except PermissionError:
+            QMessageBox.critical(
+                self,
+                "Permission Error",
+                f"Permission denied accessing folder:\n{workspace_folder}"
+            )
+            return
+        except Exception as e:
+            QMessageBox.critical(
+                self,
+                "Error",
+                f"Error scanning workspace folder:\n{str(e)}"
+            )
+            return
+        
+        if not lakehouses:
+            QMessageBox.information(
+                self,
+                "No Lakehouses Found",
+                f"No lakehouses found in:\n{workspace_folder}\n\n"
+                f"Looking for folders starting with 'lh_' that contain a 'Tables' folder."
+            )
+            return
+        
+        # Create folders for each lakehouse (but don't load tables yet)
+        for lakehouse in lakehouses:
+            folder_name = f"{lakehouse['name']} (OneLake)"
+            # Create folder with lakehouse path stored for lazy loading
+            folder = self.tables_list.create_folder(
+                folder_name, 
+                lakehouse_path=lakehouse['tables_path']
+            )
+        
+        self.statusBar().showMessage(
+            f'Discovered {len(lakehouses)} lakehouse(s) from {os.path.basename(workspace_folder)}. '
+            f'Expand a folder to load its tables.'
+        )
+        
+        QMessageBox.information(
+            self,
+            "Lakehouses Discovered",
+            f"Found {len(lakehouses)} lakehouse(s):\n\n" +
+            "\n".join([f"  • {lh['name']}" for lh in lakehouses]) +
+            "\n\nExpand a lakehouse folder to load its Delta tables."
+        )
+    
+    def load_onelake_folder_tables(self, folder_item, tables_folder_path):
+        """Discover Delta tables for a OneLake folder (lazy loading - tables load when accessed)"""
+        if not self.db_manager.is_connected():
+            connection_info = self.db_manager.create_memory_connection()
+            self.db_info_label.setText(connection_info)
+        
+        # Check if already discovered (has children that are not placeholders)
+        if folder_item.childCount() > 0:
+            # Check if first child is a placeholder
+            first_child = folder_item.child(0)
+            if first_child and first_child.data(0, Qt.ItemDataRole.UserRole) != "placeholder":
+                return  # Already discovered
+            # If it's a placeholder, remove it and continue
+            folder_item.removeChild(first_child)
+        
+        tables_path = Path(tables_folder_path)
+        
+        # Scan for Delta tables in the Tables folder
+        delta_tables = []
+        
+        try:
+            for item in tables_path.iterdir():
+                if item.is_dir():
+                    delta_log_path = item / '_delta_log'
+                    if delta_log_path.exists():
+                        delta_tables.append(item)
+        except PermissionError:
+            QMessageBox.critical(
+                self,
+                "Permission Error",
+                f"Permission denied accessing folder:\n{tables_folder_path}"
+            )
+            return
+        except Exception as e:
+            QMessageBox.critical(
+                self,
+                "Error",
+                f"Error scanning tables folder:\n{str(e)}"
+            )
+            return
+        
+        if not delta_tables:
+            # Add a placeholder item to indicate no tables found
+            placeholder = QTreeWidgetItem(folder_item)
+            placeholder.setText(0, "(No Delta tables found)")
+            placeholder.setData(0, Qt.ItemDataRole.UserRole, "placeholder")
+            placeholder.setFlags(Qt.ItemFlag.NoItemFlags)  # Not selectable
+            return
+        
+        lakehouse_name = folder_item.text(0).replace(' (OneLake)', '')
+        
+        # Register tables without loading them (lazy loading)
+        discovered_count = 0
+        failed_tables = []
+        
+        for delta_table_path in delta_tables:
+            try:
+                # Generate table name from folder name
+                base_name = os.path.basename(delta_table_path)
+                table_name = self.db_manager.sanitize_table_name(base_name)
+                
+                # Ensure unique table name
+                original_name = table_name
+                counter = 1
+                while table_name in self.db_manager.loaded_tables:
+                    table_name = f"{original_name}_{counter}"
+                    counter += 1
+                
+                # Register the table path (but don't load it yet)
+                self.db_manager.loaded_tables[table_name] = str(delta_table_path)
+                self.db_manager.table_columns[table_name] = []  # Will be populated when loaded
+                
+                # Add to table list with needs_reload=True (lazy loading)
+                self.tables_list.add_table_item(
+                    table_name, 
+                    delta_table_path.name,
+                    needs_reload=True,  # Mark as needing load
+                    folder_name=folder_item.text(0)
+                )
+                
+                discovered_count += 1
+                
+            except Exception as e:
+                failed_tables.append((delta_table_path.name, str(e)))
+                continue
+        
+        # Update status message
+        if failed_tables:
+            self.statusBar().showMessage(
+                f'Discovered {discovered_count} of {len(delta_tables)} tables from {lakehouse_name} ({len(failed_tables)} failed). Click tables to load them.',
+                5000
+            )
+        else:
+            self.statusBar().showMessage(
+                f'Discovered {discovered_count} Delta table(s) from {lakehouse_name}. Click tables to load them.',
+                3000
+            )
+
     def show_load_dialog(self):
         """Show a modern dialog with options to load different types of data"""
         # Create the dialog
@@ -3731,6 +4133,16 @@ LIMIT 10
         )
         options_layout.addWidget(delta_option)
         
+        # OneLake / Lakehouse option
+        onelake_option = create_option_button(
+            "OneLake / Lakehouse",
+            "Load all Delta tables from a OneLake Tables folder (Microsoft Fabric).",
+            "folder-remote",
+            "onelake",
+            "#0078D4"  # Microsoft blue accent
+        )
+        options_layout.addWidget(onelake_option)
+        
         # Test Data option
         test_option = create_option_button(
             "Test Data",
@@ -3821,6 +4233,8 @@ LIMIT 10
             self.browse_files()
         elif option == "delta":
             self.load_delta_table()
+        elif option == "onelake":
+            self.load_onelake_tables()
         elif option == "test":
             self.load_test_data()
 
@@ -4541,7 +4955,7 @@ LIMIT 10
 
 def main():
     # Parse command line arguments
-    parser = argparse.ArgumentParser(description='SQL Shell - SQL Query Tool')
+    parser = argparse.ArgumentParser(description='R.A.L.P.H. – Read/Analyze/Load/Parse Hub - SQL Query Tool')
     parser.add_argument('--no-auto-load', action='store_true', 
                         help='Disable auto-loading the most recent project at startup')
     args = parser.parse_args()
