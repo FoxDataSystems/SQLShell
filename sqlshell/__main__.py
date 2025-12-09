@@ -145,24 +145,32 @@ class SQLShell(QMainWindow):
         # Load recent and frequent files from settings
         self.load_recent_files()
         
-        # Define color scheme - Wortell brand colors
+        # Define color scheme - Windows 95 classic colors
         self.colors = {
-            'primary': "#8301ff",       # Headers - Purple
-            'secondary': "#4cd275",      # Subtitles - Green
-            'accent': "#4cd275",         # Accent - Green
-            'background': "#06021b",      # Dark gradient start
-            'background_end': "#2f0b64", # Dark gradient end
-            'text': "#f0f0f0",           # Main text - Whiteish
-            'text_light': "#d0d0d0",      # Light text - Lighter whiteish
-            'text_muted': "#b0b0b0",      # Muted text
-            'success': "#4cd275",         # Success - Green
-            'warning': "#F39C12",         # Orange
-            'error': "#E74C3C",           # Red
-            'dark_bg': "#1a0528",         # Darker background variant
-            'light_bg': "#2f0b64",        # Lighter dark background
-            'border': "#4cd275",          # Border - Green accent
-            'header': "#8301ff",          # Headers - Purple
-            'subtitle': "#4cd275"         # Subtitles - Green
+            'primary': "#000080",         # Windows 95 blue
+            'secondary': "#C0C0C0",       # Light gray (button face)
+            'accent': "#000080",          # Windows 95 blue
+            'background': "#C0C0C0",      # Windows 95 desktop gray
+            'background_end': "#C0C0C0",  # Same gray (no gradient)
+            'text': "#000000",            # Black text
+            'text_light': "#000000",      # Black text
+            'text_muted': "#808080",      # Dark gray
+            'success': "#008000",          # Green
+            'warning': "#808000",         # Olive
+            'error': "#800000",           # Maroon
+            'dark_bg': "#808080",         # Dark gray
+            'light_bg': "#C0C0C0",        # Light gray
+            'border': "#000000",           # Black border
+            'header': "#000080",           # Windows 95 blue
+            'subtitle': "#000000",         # Black
+            'button_face': "#C0C0C0",      # Button face color
+            'button_highlight': "#FFFFFF", # Button highlight (top/left)
+            'button_shadow': "#808080",    # Button shadow (bottom/right)
+            'button_dark_shadow': "#000000", # Button dark shadow
+            'window': "#C0C0C0",           # Window background
+            'window_text': "#000000",      # Window text
+            'highlight': "#000080",        # Selection blue
+            'highlight_text': "#FFFFFF"    # Selection text white
         }
         
         self.init_ui()
